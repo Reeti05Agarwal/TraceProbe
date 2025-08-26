@@ -1,24 +1,30 @@
-version: '3.8'
-
 services:
   zookeeper:
-    # ... (no changes here)
     image: confluentinc/cp-zookeeper:7.2.1
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      # Explicitly enable the 'ruok' health check command
+      ZOO_4LW_COMMANDS_WHITELIST: "ruok"
     ports:
       - "2181:2181"
     networks:
       - ipdr-network
+    healthcheck:
+      # Use a more reliable bash command to check the TCP port
+      test: ["CMD-SHELL", "bash -c 'echo ruok | nc -w 2 localhost 2181'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
 
   kafka:
-    # ... (no changes here)
     image: confluentinc/cp-kafka:7.2.1
     container_name: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -32,9 +38,14 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     networks:
       - ipdr-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: always
 
   elasticsearch:
-    # ... (no changes here)
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
     container_name: elasticsearch
     environment:
@@ -42,71 +53,76 @@ services:
       - "xpack.security.enabled=false"
     ports:
       - "9200:9200"
-    ulimits: 
+    ulimits:
       memlock:
         soft: -1
         hard: -1
     networks:
       - ipdr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: always
 
   kibana:
-    # ... (no changes here)
     image: docker.elastic.co/kibana/kibana:8.6.2
     container_name: kibana
     ports:
       - "5601:5601"
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - ipdr-network
+    restart: always
 
-  # --- NEW SERVICES FOR YOUR PYTHON APPS ---
-  
   producer:
     build:
-      context: ./ipdr_analyzer/producer
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./ipdr_analyzer/producer/Dockerfile
     container_name: producer
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - ipdr-network
     env_file:
-      - .env 
-    # --- ADD THIS SECTION ---
+      - .env
     volumes:
       - ./data:/data
-    # --- END SECTION ---
-    restart: unless-stopped
+    restart: on-failure
 
   processor:
-    # ... (no changes here)
     build:
-      context: ./ipdr_analyzer/processor
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./ipdr_analyzer/processor/Dockerfile
     container_name: processor
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - ipdr-network
     env_file:
       - .env
-    restart: unless-stopped
+    restart: on-failure
 
   consumer:
-    # ... (no changes here)
     build:
-      context: ./ipdr_analyzer/consumer
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./ipdr_analyzer/consumer/Dockerfile
     container_name: consumer
     depends_on:
-      - kafka
-      - elasticsearch
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     networks:
       - ipdr-network
     env_file:
       - .env
-    restart: unless-stopped
+    restart: on-failure
 
 networks:
   ipdr-network:

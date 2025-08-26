@@ -5,19 +5,21 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-# We copy requirements.txt from the root directory
-COPY ../../requirements.txt .
+# We copy requirements.txt from the root directory (the context)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the common library code
-COPY ../common ./ipdr_analyzer/common
+# The path is now relative to the context (project root)
+COPY ipdr_analyzer/common ./ipdr_analyzer/common
 
 # Copy the application code for this specific service
-# The first '.' is the service directory (e.g., 'producer'), the second '.' is the WORKDIR in the container
-COPY . .
+# Note: This command is slightly different for each Dockerfile
+# SEE BELOW
 
 # Set the python path to allow for package imports
 ENV PYTHONPATH=/app
 
 # Command to run the application
-CMD ["python", "-u", "main.py"]
+COPY ipdr_analyzer/consumer ./ipdr_analyzer/consumer
+CMD ["python", "-u", "ipdr_analyzer/consumer/main.py"]

@@ -1,142 +1,132 @@
-# IPDR FlowAnalyzer: Log Analysis & Mapping Tool
+Of course\! Here is a complete `README.md` file for your project. You can copy and paste this directly into a file named `README.md` in the root of your project directory.
 
-[](https://opensource.org/licenses/MIT)
+-----
 
-A real-time, high-throughput analytics tool designed for law enforcement agencies to analyze massive IPDR (Internet Protocol Detail Record) logs. This system automates the detection of suspicious communication patterns, maps A-Party to B-Party connections, and provides investigators with a powerful, intuitive dashboard to accelerate digital forensic investigations.
+# IPDR FlowAnalyzer: Log Analysis & Mapping Tool 🕵️‍♂️
 
-## Table of Contents
+This project is a real-time data pipeline designed to ingest, process, and analyze massive volumes of IPDR (Internet Protocol Detail Record) logs. It helps law enforcement investigators identify and visualize communication patterns, mapping connections between parties of interest.
 
-  - [Overview](https://www.google.com/search?q=%23overview)
-  - [Key Features](https://www.google.com/search?q=%23key-features)
-  - [System Architecture](https://www.google.com/search?q=%23system-architecture)
-  - [Tech Stack](https://www.google.com/search?q=%23tech-stack)
-  - [Getting Started](https://www.google.com/search?q=%23getting-started)
-      - [Prerequisites](https://www.google.com/search?q=%23prerequisites)
-      - [Installation](https://www.google.com/search?q=%23installation)
-  - [Usage](https://www.google.com/search?q=%23usage)
-  - [Data Security and Compliance](https://www.google.com/search?q=%23data-security-and-compliance)
-  - [Contributing](https://www.google.com/search?q=%23contributing)
-  - [License](https://www.google.com/search?q=%23license)
+## Tech Stack 🛠️
 
-## Overview
+  * **Data Ingestion & Processing:** Python
+  * **Message Broker:** Apache Kafka
+  * **Search & Analytics Engine:** Elasticsearch
+  * **Visualization:** Kibana
+  * **Containerization:** Docker & Docker Compose
 
-In modern digital forensics, investigators face the challenge of sifting through enormous volumes of IPDR logs to identify and map connections between parties of interest. This process is often manual, time-consuming, and prone to error.
-
-The **IPDR FlowAnalyzer** is built to solve this problem. By leveraging a powerful streaming architecture with Apache Kafka and Apache Flink, the tool ingests and processes log data in real-time. It intelligently parses diverse log formats, identifies initiator (A-Party) and recipient (B-Party) relationships, and highlights anomalies. The results are presented in a user-friendly dashboard, empowering investigators to visualize connections, filter relevant data, and significantly speed up their analytical workflow. Our implementation has shown to **increase digital forensic support for police investigations by 30%**.
-
-## Key Features
-
-  - **Multi-Format Log Ingestion**: Understands and normalizes various IPDR formats from different ISPs (e.g., CSV, JSON, XML).
-  - **Real-Time Stream Processing**: Parses, cleans, and enriches complex log files on the fly.
-  - **A-Party to B-Party Mapping**: Automatically identifies and maps the initiator versus the recipient in any communication session.
-  - **Advanced Filtering**: Allows investigators to filter sessions based on time ranges, IP addresses, subscriber IDs, location data, and more.
-  - **Connection Visualization**: Presents complex relationships in intuitive formats:
-      - **Graph-based view** (using D3.js) to show networks of communication.
-      - **Map-based view** (using Leaflet/Mapbox) to visualize the geographical path of data.
-  - **Anomaly Detection**: Automatically flags suspicious patterns, such as unusual data volumes, communication with known bad actors, or irregular time-of-day activity.
-  - **Powerful Search**: Features advanced query and search capabilities to quickly pinpoint relevant records within terabytes of data.
-  - **Investigator Dashboard**: A secure, web-based dashboard designed for ease of use by non-technical personnel.
-  - **Data Security**: Ensures end-to-end data security and compliance with legal and agency standards.
+-----
 
 ## System Architecture
 
-The system is designed as a distributed, scalable pipeline to handle high-velocity data streams from ISPs.
+The entire workflow is a data pipeline that moves log data from a raw file to a searchable, visual dashboard.
 
-The data flows through the following stages:
+-----
 
-1.  **Data Ingestion**: Raw IPDR logs are sourced from ISPs (via secure API or file transfer) and ingested into an **Apache Kafka** topic. This provides a durable and scalable buffer for incoming data.
+## Prerequisites
 
-2.  **Real-Time Processing**: An **Apache Flink** cluster consumes the data from Kafka. Flink jobs are responsible for:
+Before you begin, ensure you have the following installed on your system:
 
-      - **Parsing & Normalization**: Transforming raw log strings from various formats into a standardized model.
-      - **Enrichment**: Augmenting records with additional data, such as subscriber information or threat intelligence.
-      - **Stateful Analysis**: Identifying and mapping A-Party to B-Party sessions and detecting anomalies over time windows.
+  * **Docker:** [Get Docker](https://docs.docker.com/get-docker/)
+  * **Docker Compose:** [Install Docker Compose](https://docs.docker.com/compose/install/)
 
-3.  **Data Storage**:
+-----
 
-      - **Investigation Database (PostgreSQL/MySQL)**: The processed, structured, and enriched data is stored in our primary investigation database. This historical data is optimized for fast querying by the backend.
-      - **ISP Database (External)**: The system can query ISP databases via a secure API for on-demand subscriber details or supplementary logs.
+## Getting Started 🚀
 
-4.  **Backend API**: A **Python-based** API (e.g., using FastAPI or Django) serves as the bridge between the frontend and the data layer. It handles user authentication, executes queries against the investigation database, and formats the data for visualization.
+Follow these steps to set up and run the application.
 
-5.  **Frontend Dashboard**: A modern, responsive web application built with **React** and **Redux** for state management. It provides investigators with all the necessary tools for analysis, visualization (D3.js, Mapbox), and reporting.
+### 1\. Clone the Repository
 
-## Tech Stack
+```bash
+git clone <your-repository-url>
+cd <your-repository-name>
+```
 
-| Category              | Technology                                                     |
-| --------------------- | -------------------------------------------------------------- |
-| **Data Streaming** | Apache Kafka                                                   |
-| **Stream Processing** | Apache Flink                                                   |
-| **Backend** | Python (FastAPI / Django), Gunicorn                            |
-| **Database** | PostgreSQL, MySQL                                              |
-| **Frontend** | React, Redux, D3.js, Leaflet, Mapbox, Ant Design               |
-| **DevOps** | Docker, Kubernetes, Jenkins                                    |
+### 2\. Create the Configuration File
 
-## Getting Started
+Create a file named `.env` in the root of the project and paste the following content into it. This file provides configuration variables to all the services.
 
-### Prerequisites
+```env
+# --- Kafka Topics ---
+KAFKA_RAW_LOGS_TOPIC=raw_ipdr_logs
+KAFKA_PROCESSED_TOPIC=processed_ipdr_connections
 
-  - Java 11+ (for Flink & Kafka)
-  - Python 3.9+
-  - Node.js 16+
-  - Docker & Docker Compose
+# --- Service Hostnames (match docker-compose service names) ---
+KAFKA_HOST=kafka
+KAFKA_PORT=29092
+ELASTICSEARCH_HOST=elasticsearch
+ELASTICSEARCH_PORT=9200
 
-### Installation
+# --- Log file path for the producer ---
+LOG_FILE_PATH=/data/dummy_logs.json
+```
 
-1.  **Clone the repository:**
-    ```sh
-    git clone https://github.com/your-username/ipdr-flowanalyzer.git
-    cd ipdr-flowanalyzer
+### 3\. Create Sample Data
+
+The `producer` service needs some log data to process.
+
+1.  Create a new directory named `data` in the project root:
+    ```bash
+    mkdir data
     ```
-2.  **Set up the environment:**
-      - Create a `.env` file from the `env.example` template and fill in your database credentials, Kafka broker addresses, and other secrets.
-3.  **Launch the backend infrastructure:**
-    ```sh
-    docker-compose up -d kafka flink postgres
+2.  Create a file inside it named `dummy_logs.json`:
+    ```bash
+    touch data/dummy_logs.json
     ```
-4.  **Install backend dependencies and run migrations:**
-    ```sh
-    cd backend
-    pip install -r requirements.txt
-    alembic upgrade head
+3.  Add a few sample JSON log entries to `data/dummy_logs.json`. **Each JSON object must be on its own line.**
+    ```json
+    {"timestamp": "2025-08-27T10:00:00Z", "source_ip": "192.168.1.10", "destination_ip": "8.8.8.8", "source_port": 54321, "destination_port": 53, "protocol": "UDP"}
+    {"timestamp": "2025-08-27T10:00:01Z", "source_ip": "10.0.0.5", "destination_ip": "1.1.1.1", "source_port": 12345, "destination_port": 443, "protocol": "TCP"}
+    {"timestamp": "2025-08-27T10:00:02Z", "user_id": "user-A", "b_party_number": "9876543210", "imei": "123456789012345"}
     ```
-5.  **Install frontend dependencies:**
-    ```sh
-    cd ../frontend
-    npm install
-    ```
-6.  **Run the application:**
-      - Start the backend server: `uvicorn main:app --reload`
-      - Start the frontend server: `npm start`
 
-## Usage
+-----
 
-1.  Access the web dashboard at `http://localhost:3000`.
-2.  Log in using credentials provided by the system administrator.
-3.  Use the search bar and filter panel to define your query (e.g., search for an IP address within a specific date range).
-4.  Analyze the results in the data table.
-5.  Switch to the "Graph" or "Map" view to visualize the connections between the A-Party and B-Party.
-6.  Export relevant data as CSV or PDF for case reports.
+## Running the Application
 
-## Data Security and Compliance
+### Start the Pipeline
 
-This tool is designed to handle highly sensitive law enforcement data. Security is a top priority, and the following measures are implemented:
+Run the following command from the project's root directory. This will build the custom Python images and start all the services.
 
-  - **Role-Based Access Control (RBAC)** to ensure users only access data they are authorized to see.
-  - **Encryption** of data at rest and in transit.
-  - **Audit Trails** to log all user actions for accountability.
-  - **Compliance** with data protection regulations and legal frameworks governing law enforcement data.
+```bash
+docker-compose up --build
+```
 
-## Contributing
+You'll see logs from all the services. The `producer` will send the data and exit, while the other services will continue running.
 
-Contributions are welcome\! Please fork the repository and submit a pull request for any features, bug fixes, or enhancements.
+### Stop the Pipeline
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+To stop all the running containers, press `Ctrl + C` in the terminal, and then run:
 
-## License
+```bash
+docker-compose down
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
+-----
+
+## Viewing the Results in Kibana 📊
+
+After starting the application, allow a minute for Kibana to initialize.
+
+1.  **Open Kibana:** Navigate to **`http://localhost:5601`** in your web browser.
+
+2.  **Create a Data View:** This tells Kibana which data to look at.
+
+      * Click the menu icon (☰) in the top-left and go to **Stack Management** \> **Data Views**.
+      * Click **Create data view**.
+      * For the **Index pattern**, type `ipdr_connections`.
+      * Click **Save data view to Kibana**.
+
+3.  **Explore Your Data:**
+
+      * Click the main menu icon (☰) again and navigate to **Discover**.
+      * You should now see your processed log data, ready to be searched and visualized\!
+
+-----
+
+## Project Structure
+
+  * **/producer**: The Python service that reads log files and sends them to the `raw_ipdr_logs` Kafka topic.
+  * **/processor**: The Python service that consumes from `raw_ipdr_logs`, performs analysis (e.g., A-party/B-party mapping), and sends the processed data to the `processed_ipdr_connections` topic.
+  * **/consumer**: The Python service that consumes from `processed_ipdr_connections` and indexes the final, clean data into Elasticsearch.
+  * **docker-compose.yml**: Defines and orchestrates all the services in the application.

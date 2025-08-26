@@ -1,4 +1,3 @@
-# ipdr_analyzer/processor/main.py
 import os
 import json
 from ipdr_analyzer.common.kafka_client import create_producer, create_consumer
@@ -35,3 +34,5 @@ for message in consumer:
 
     except Exception as e:
         print(f"Failed to process message: {raw_log}. Error: {e}")
+
+
