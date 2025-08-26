@@ -1,11 +1,11 @@
-version: '3.7'
+version: '3.8'
+
 services:
   zookeeper:
-    # --- CHANGE 1: Use a stable version ---
+    # ... (no changes here)
     image: confluentinc/cp-zookeeper:7.2.1
     container_name: zookeeper
     environment:
-      _JAVA_OPTIONS: "-Dcom.sun.management.jmxremote=false"
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
@@ -14,7 +14,7 @@ services:
       - ipdr-network
 
   kafka:
-    # --- CHANGE 2: Use a matching stable version ---
+    # ... (no changes here)
     image: confluentinc/cp-kafka:7.2.1
     container_name: kafka
     depends_on:
@@ -34,6 +34,7 @@ services:
       - ipdr-network
 
   elasticsearch:
+    # ... (no changes here)
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
     container_name: elasticsearch
     environment:
@@ -41,10 +42,15 @@ services:
       - "xpack.security.enabled=false"
     ports:
       - "9200:9200"
+    ulimits: 
+      memlock:
+        soft: -1
+        hard: -1
     networks:
       - ipdr-network
 
   kibana:
+    # ... (no changes here)
     image: docker.elastic.co/kibana/kibana:8.6.2
     container_name: kibana
     ports:
@@ -53,6 +59,54 @@ services:
       - elasticsearch
     networks:
       - ipdr-network
+
+  # --- NEW SERVICES FOR YOUR PYTHON APPS ---
+  
+  producer:
+    build:
+      context: ./ipdr_analyzer/producer
+      dockerfile: Dockerfile
+    container_name: producer
+    depends_on:
+      - kafka
+    networks:
+      - ipdr-network
+    env_file:
+      - .env 
+    # --- ADD THIS SECTION ---
+    volumes:
+      - ./data:/data
+    # --- END SECTION ---
+    restart: unless-stopped
+
+  processor:
+    # ... (no changes here)
+    build:
+      context: ./ipdr_analyzer/processor
+      dockerfile: Dockerfile
+    container_name: processor
+    depends_on:
+      - kafka
+    networks:
+      - ipdr-network
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  consumer:
+    # ... (no changes here)
+    build:
+      context: ./ipdr_analyzer/consumer
+      dockerfile: Dockerfile
+    container_name: consumer
+    depends_on:
+      - kafka
+      - elasticsearch
+    networks:
+      - ipdr-network
+    env_file:
+      - .env
+    restart: unless-stopped
 
 networks:
   ipdr-network:
