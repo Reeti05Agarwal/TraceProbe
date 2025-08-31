@@ -1,0 +1,3 @@
+{"type":"visualization","id":"alert_count_viz","attributes":{"title":"Alert Count Over Time","visState":"{\"type\":\"line\",\"params\":...}","uiStateJSON":"{}","description":"","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"index\":\"ipdr_connections\",\"query\":{\"query\":\"\",\"language\":\"kuery\"}}"},"version":1}}
+{"type":"dashboard","id":"case103_dashboard","attributes":{"title":"Case103 Overview","hits":0,"description":"","panelsJSON":"[{\"panelIndex\":\"1\",\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":15},\"type\":\"visualization\",\"id\":\"alert_count_viz\"}]","optionsJSON":"{\"darkTheme\":false}","version":1}}
+{"type":"index-pattern","id":"ipdr_connections","attributes":{"title":"ipdr_connections","timeFieldName":"timestamp"}}
