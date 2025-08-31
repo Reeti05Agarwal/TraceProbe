@@ -1,104 +1,114 @@
 // server.ts
-
 import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { Client as ESClient } from "@elastic/elasticsearch";
-import axios from "axios"; 
-import { exec } from "child_process";
-import bcrypt from "bcrypt"; 
+import axios from "axios";
+import FormData from "form-data";
+import bcrypt from "bcrypt";
 import { fileURLToPath } from "url";
+import os from "os";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// IMPORTANT: when running inside docker, mount ./data to /data and set UPLOAD_DIR to /data/uploads
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "data", "uploads");
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 const upload = multer({ dest: UPLOAD_DIR });
 
-// Elasticsearch & Kibana & Producer URLs (configure via env)
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// URLs
 const ES_URL = process.env.ELASTICSEARCH_URL || "http://elasticsearch:9200";
 const KIBANA_URL = process.env.KIBANA_URL || "http://kibana:5601";
 const PRODUCER_URL = process.env.PRODUCER_URL || "http://producer:5000";
 
 const es = new ESClient({ node: ES_URL });
 
-// Serve static UI assets
-app.use(express.static("public"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// --- Helpers ---
 
-// API to get cases
-app.get("/api/cases", async (req, res) => {
-  try {
-    const resp = await es.search({
-      index: "cases",
-      size: 100,
-      sort: [{ "date_created": { order: "desc" } }]
-    });
-    const hits = resp.hits.hits.map(h => ({ id: h._id, ...(h._source as any) }));
-    res.json(hits);
-  } catch (e) {
-    res.status(500).json({ error: String(e) });
-  }
-});
-
-// Helper: create Kibana space
 async function createKibanaSpace(spaceId: string, spaceName: string) {
-  const body = { id: spaceId, name: spaceName, disabledFeatures: [] };
-  await axios.post(`${KIBANA_URL}/api/spaces/space`, body, { headers: { "kbn-xsrf": "true" } });
+  try {
+    await axios.post(
+      `${KIBANA_URL}/api/spaces/space`,
+      { id: spaceId, name: spaceName, disabledFeatures: [] },
+      { headers: { "kbn-xsrf": "true" } }
+    );
+  } catch (err: any) {
+    if (!(err.response && err.response.status === 409)) throw err;
+  }
 }
 
-// --- Updated: Import dashboard using host-side script ---
-// async function importDashboardTemplate(spaceId: string, templatePath: string) {
-//   const templateFileName = path.basename(templatePath);
-//   return new Promise<void>((resolve, reject) => {
-//     const command = `./import_dashboard.sh ${spaceId} ${templateFileName}`;
-//     exec(command, (err, stdout, stderr) => {
-//       if (err) return reject(err);
-//       console.log("Kibana CLI stdout:\n", stdout);
-//       console.error("Kibana CLI stderr:\n", stderr);
-//       resolve();
-//     });
-//   });
-// }
-
-
-// async function importDashboardTemplate(spaceId: string, templatePath: string) {
-//   const form = new FormData();
-//   form.append('file', fs.createReadStream(templatePath));
-
-//   const headers = {
-//     ...form.getHeaders(), // sets Content-Type to multipart/form-data correctly
-//     'kbn-xsrf': 'true',
-//   };
-
-//   const url = `http://kibana:5601/s/${spaceId}/api/saved_objects/_import?overwrite=true`;
-
-//   try {
-//     const response = await axios.post(url, form, { headers });
-//     console.log("Import response:", response.data);
-//   } catch (err: any) {
-//     console.error("Import failed:", err.response?.data || err.message);
-//   }
-// }
-
-
-// Helper: create index pattern inside the space
-async function createIndexPattern(spaceId: string, indexPatternId: string, title: string, timeField = "timestamp") {
+async function createIndexPattern(spaceId: string, indexPatternId: string, timeField = "timestamp") {
   const headers = { "kbn-xsrf": "true", "Content-Type": "application/json" };
-  const body = { attributes: { title, timeFieldName: timeField } };
-  await axios.post(
-    `${KIBANA_URL}/s/${encodeURIComponent(spaceId)}/api/saved_objects/index-pattern/${encodeURIComponent(indexPatternId)}`,
-    body,
-    { headers }
-  );
+  const body = { attributes: { title: indexPatternId, timeFieldName: timeField } };
+  try {
+    await axios.post(
+      `${KIBANA_URL}/s/${encodeURIComponent(spaceId)}/api/saved_objects/index-pattern/${encodeURIComponent(indexPatternId)}`,
+      body,
+      { headers }
+    );
+  } catch (err: any) {
+    if (!(err.response && err.response.status === 409)) throw err; // ignore "already exists"
+  }
 }
 
-// POST /api/cases : create case and upload file
+// Patch NDJSON: remove index-patterns, only adjust references
+function patchNdjson(templatePath: string, caseId: string): string {
+  const newIndexPatternId = `ipdr_connections_${caseId}`;
+  const lines = fs.readFileSync(templatePath, "utf-8")
+    .split("\n")
+    .filter(l => l.trim().length > 0);
+
+  const patched = lines.map(line => {
+    try {
+      const obj = JSON.parse(line);
+
+      // drop index-pattern objects entirely (we create separately)
+      if (obj.type === "index-pattern") return null;
+
+      // patch references in dashboards/visualizations
+      if (Array.isArray(obj.references)) {
+        obj.references = obj.references.map((ref: any) =>
+          ref.type === "index-pattern" ? { ...ref, id: newIndexPatternId } : ref
+        );
+      }
+
+      return JSON.stringify(obj);
+    } catch {
+      console.warn("Skipping unparsable line in template:", line);
+      return line;
+    }
+  }).filter(Boolean); // remove nulls
+
+  const tmpPath = path.join(os.tmpdir(), `dashboard_${caseId}.ndjson`);
+  fs.writeFileSync(tmpPath, patched.join("\n"));
+  return tmpPath;
+}
+
+async function importDashboardTemplate(spaceId: string, templatePath: string, caseId: string) {
+  const patchedPath = patchNdjson(templatePath, caseId);
+  const form = new FormData();
+  form.append("file", fs.createReadStream(patchedPath));
+
+  const headers = { ...form.getHeaders(), "kbn-xsrf": "true" };
+  const url = `${KIBANA_URL}/s/${spaceId}/api/saved_objects/_import?overwrite=true`;
+
+  const response = await axios.post(url, form, {
+    headers,
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity
+  });
+  console.log("Import response:", response.data);
+}
+
+// --- Routes ---
+
 app.post("/api/cases", upload.single("file"), async (req, res) => {
   try {
     const { case_name, investigator_id, password, description } = req.body;
@@ -106,19 +116,14 @@ app.post("/api/cases", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "missing_fields" });
     }
 
-    // generate safe case_id
     const caseId = case_name.toLowerCase().replace(/[^a-z0-9-_]/g, "-").slice(0, 40);
 
-    // save uploaded file
-    const origName = req.file.originalname;
-    const savedFileName = `${caseId}__${Date.now()}__${origName}`;
+    const savedFileName = `${caseId}__${Date.now()}__${req.file.originalname}`;
     const savedFilePath = path.join(UPLOAD_DIR, savedFileName);
     fs.renameSync(req.file.path, savedFilePath);
 
-    // hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // create case document in ES
     const caseDoc = {
       case_id: caseId,
       case_name,
@@ -130,39 +135,27 @@ app.post("/api/cases", upload.single("file"), async (req, res) => {
     };
     await es.index({ index: "cases", document: caseDoc });
 
-    // Create Kibana space
-    try {
-      await createKibanaSpace(caseId, case_name);
-    } catch (err: any) {
-      if (err.response && err.response.status !== 409) throw err;
+    await createKibanaSpace(caseId, case_name);
+
+    const indexPatternId = `ipdr_connections_${caseId}`;
+    await createIndexPattern(caseId, indexPatternId);
+
+    const templatePath = path.join(__dirname, "templates", "dashboard_template.ndjson");
+    if (fs.existsSync(templatePath)) {
+      console.log("❤️ Importing dashboard for", caseId);
+      await importDashboardTemplate(caseId, templatePath, caseId);
     }
 
-    // // Import dashboard template using host script
-    // const templatePath = path.join(process.cwd(), "templates", "dashboard_template.ndjson");
-    // if (fs.existsSync(templatePath)) {
-    //   await importDashboardTemplate(caseId, templatePath);
-    // } else {
-    //   console.warn("dashboard template not found, skipping import:", templatePath);
-    // }
-
-    // Create index pattern
-    const indexPatternId = `ipdr_connections_${caseId}`;
-    await createIndexPattern(caseId, indexPatternId, "ipdr_connections");
-
-    // Trigger producer
     await axios.post(`${PRODUCER_URL}/process`, { file_path: savedFilePath, case_id: caseId });
-    console.log("Saved file path:", savedFilePath);
-    console.log("Sending to producer:", `${PRODUCER_URL}/process`);
 
     res.json({ status: "ok", case: caseDoc });
 
   } catch (err: any) {
-    console.error("Create case error:", err && err.toString());
+    console.error("Create case error:", err?.response?.data || err.toString());
     res.status(500).json({ error: String(err) });
   }
 });
 
-// Minimal index page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "views", "index.html"));
 });

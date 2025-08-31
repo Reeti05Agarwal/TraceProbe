@@ -1,27 +1,26 @@
-# Use an official Node runtime as the base image
-FROM node:20-slim
-
-# # Install Docker CLI
-# RUN apt-get update && \
-#     apt-get install -y docker.io && \
-#     rm -rf /var/lib/apt/lists/*
-
-# Set working directory
+# Build stage
+FROM node:20-slim as build
 WORKDIR /app
 
-# Install dependencies first (better caching)
 COPY package*.json tsconfig.json ./
-RUN npm install
-
-# Copy the source code
+RUN npm install --include=dev
 COPY . .
+RUN npm install -g typescript
+RUN tsc
 
-# Build TypeScript
-RUN npx tsc
+# Runtime stage
+FROM node:20-slim
+WORKDIR /app
 
-# Expose port for the Express server
+# Copy only package.json files and install production deps
+COPY package*.json ./
+RUN npm install --omit=dev
+
+# Copy built JS + assets
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/views ./dist/views
+COPY --from=build /app/templates ./dist/templates
+COPY --from=build /app/public ./dist/public
+
 EXPOSE 3000
-COPY views ./dist/views
-COPY templates ./dist/templates
-# Run the compiled server (not the .ts file!)
 CMD ["node", "dist/server.js"]

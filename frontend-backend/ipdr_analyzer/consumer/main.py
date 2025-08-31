@@ -19,7 +19,8 @@ print("Elasticsearch consumer started. Listening for processed messages...")
 
 for message in consumer:
     record = message.value  # JSON already deserialized
-    print(f"Received processed record: {record}")
+    record_count = 0
+    # print(f"Received processed record: {record}")
 
     case_id = record.get('case_id')
     if not case_id:
@@ -40,6 +41,9 @@ for message in consumer:
     # Index the record into the case-specific index
     try:
         es.index(index=es_index_name, document=record)
-        print(f"Indexed record into {es_index_name}.")
+        record_count+=1
+        # print(f"Indexed record into {es_index_name}.")
     except Exception as e:
         print(f"Failed to index record into {es_index_name}. Error: {e}")
+
+print("Records indexed: {record_count}")
