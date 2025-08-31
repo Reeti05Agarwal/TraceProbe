@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "Node16",               // must match node16 resolution
+    "moduleResolution": "Node16",
+    "rootDir": "./",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "sourceMap": true
+  },
+  "include": ["server.ts", "views/**/*", "public/**/*"]
+}

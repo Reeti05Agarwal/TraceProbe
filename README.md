@@ -2,6 +2,15 @@ Of course\! Here is a complete `README.md` file for your project. You can copy a
 
 -----
 
+Frontend UI → http://localhost:3000
+
+Backend API → http://localhost:8000/api
+
+Kibana → http://localhost:5601
+
+Elasticsearch → http://localhost:9200
+
+
 # IPDR FlowAnalyzer: Log Analysis & Mapping Tool 🕵️‍♂️
 
 This project is a real-time data pipeline designed to ingest, process, and analyze massive volumes of IPDR (Internet Protocol Detail Record) logs. It helps law enforcement investigators identify and visualize communication patterns, mapping connections between parties of interest.
