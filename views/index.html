@@ -77,7 +77,7 @@ async function loadCases() {
         <td>${c.case_name}</td>
         <td>${c.investigator_id}</td>
         <td>${c.date_created ? new Date(c.date_created).toLocaleString() : ''}</td>
-        <td><a href="http://kibana:5601/s/${encodeURIComponent(c.case_name)}/app/dashboard#/list?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))" target="_blank">Open</a></td>
+        <td><a href="http://localhost:5601/s/${encodeURIComponent(c.case_name)}/app/dashboard#/list?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))" target="_blank">Open</a></td>
       </tr>`).join('') + '</tbody></table>';
   } catch (err) {
     document.getElementById('casesList').innerText = 'Failed to load cases';
