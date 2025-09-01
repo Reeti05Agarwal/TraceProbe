@@ -15,7 +15,7 @@ es = Elasticsearch([{'host': ES_HOST, 'port': ES_PORT, 'scheme': 'http'}])
 print(f"Connecting to Elasticsearch at {ES_HOST}:{ES_PORT}...")
 
 # Connect to Kafka
-consumer = create_consumer(KAFKA_TOPIC, 'es-indexer-group')
+consumer = create_consumer(KAFKA_TOPIC, 'es-indexer-group', start_from_latest=True)
 print("Elasticsearch consumer started. Listening for processed messages...")
 
 for message in consumer:

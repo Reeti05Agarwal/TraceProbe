@@ -17,7 +17,7 @@ SOURCE_TOPIC = os.getenv('KAFKA_RAW_LOGS_TOPIC', 'raw_ipdr_logs')
 DESTINATION_TOPIC = os.getenv('KAFKA_PROCESSED_TOPIC', 'processed_ipdr_connections') 
 
 # Kafka clients
-consumer = create_consumer(SOURCE_TOPIC, 'ipdr-processor-group')
+consumer = create_consumer(SOURCE_TOPIC, 'ipdr-processor-group', start_from_latest=True)
 producer = create_producer()
 
 print("✅ Processor started. Listening for messages...")
