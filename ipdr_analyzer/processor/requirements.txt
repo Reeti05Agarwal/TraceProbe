@@ -1,0 +1,4 @@
+ip2geotools
+requests
+kafka-python
+dnspython

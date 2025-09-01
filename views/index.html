@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Case Management & Blacklist</title>
+  <link rel="stylesheet" href="/style.css">
+ 
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Left: Create Case -->
+    <div class="container">
+      <h1>Create New Case</h1>
+
+      <form id="uploadForm" enctype="multipart/form-data">
+        <label>Case Name</label>
+        <input name="case_name" required />
+
+        <label>Investigator ID</label>
+        <input name="investigator_id" required />
+
+        <label>Password</label>
+        <input type="password" name="password" required />
+
+        <label>Description</label>
+        <textarea name="description"></textarea>
+
+        <label>Upload File (csv / xlsx / json)</label>
+        <input type="file" name="file" accept=".csv,.xlsx,.xls,.json" required />
+
+        <button type="submit">Create Case & Upload</button>
+      </form>
+
+      <p id="status"></p>
+
+      <h2>Previous cases</h2>
+      <div id="casesList">Loading...</div>
+    </div>
+
+    <!-- Right: Blacklist -->
+    <div class="container">
+      <h2>Manage Blacklists</h2>
+
+      <div>
+        <label>Choose type:</label>
+        <select id="blType">
+          <option value="ip">IP</option>
+          <option value="domain">Domain</option>
+        </select>
+      </div>
+
+      <textarea id="blInput" placeholder="Enter one entry per line"></textarea>
+      <button id="blUpload">Upload</button>
+
+      <p id="blStatus"></p>
+
+      <h3>Current Blacklist</h3>
+      <div id="blList">Loading...</div>
+    </div>
+  </div>
+
+<script>
+/* --- Case Management --- */
+async function loadCases() {
+  try {
+    const res = await fetch('/api/cases');
+    const data = await res.json();
+    const wrap = document.getElementById('casesList');
+    if (!Array.isArray(data) || data.length === 0) {
+      wrap.innerHTML = "<i>No cases yet</i>";
+      return;
+    }
+    wrap.innerHTML = '<table><thead><tr><th>Case ID</th><th>Name</th><th>Investigator</th><th>Date</th><th>Kibana</th></tr></thead><tbody>' +
+      data.map(c => `<tr>
+        <td>${c.case_id}</td>
+        <td>${c.case_name}</td>
+        <td>${c.investigator_id}</td>
+        <td>${c.date_created || ''}</td>
+        <td><a href="${c.kibana_link || '#'}" target="_blank">Open</a></td>
+      </tr>`).join('') + '</tbody></table>';
+  } catch (err) {
+    document.getElementById('casesList').innerText = 'Failed to load cases';
+  }
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const status = document.getElementById('status');
+  status.innerText = 'Uploading...';
+  const form = new FormData(e.target);
+  try {
+    const res = await fetch('/api/cases', { method: 'POST', body: form });
+    const json = await res.json();
+    if (res.ok) {
+      status.innerText = '✅ Case created: ' + json.case_id;
+      e.target.reset();
+      loadCases();
+    } else {
+      status.innerText = '❌ Error: ' + (json.error || JSON.stringify(json));
+    }
+  } catch (err) {
+    status.innerText = '❌ Upload failed: ' + err;
+  }
+});
+
+/* --- Blacklist Management --- */
+async function loadBlacklist() {
+  const type = document.getElementById('blType').value;
+  const res = await fetch('/api/blacklist/' + type);
+  const data = await res.json();
+  const wrap = document.getElementById('blList');
+  if (!Array.isArray(data) || data.length === 0) {
+    wrap.innerHTML = "<i>No entries</i>";
+    return;
+  }
+  wrap.innerHTML = '<ul>' + data.map(d => `<li>${d.value}</li>`).join('') + '</ul>';
+}
+
+document.getElementById('blUpload').addEventListener('click', async () => {
+  const status = document.getElementById('blStatus');
+  const type = document.getElementById('blType').value;
+  const lines = document.getElementById('blInput').value.split(/\n/).map(l => l.trim()).filter(Boolean);
+
+  if (lines.length === 0) {
+    status.innerText = "❌ No entries";
+    return;
+  }
+
+  const res = await fetch('/api/blacklist/' + type, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entries: lines })
+  });
+
+  const json = await res.json();
+  if (res.ok) {
+    status.innerText = `✅ Inserted: ${json.inserted.length}, Skipped: ${json.skipped.length}`;
+    document.getElementById('blInput').value = '';
+    loadBlacklist();
+  } else {
+    status.innerText = "❌ Error: " + (json.error || "unknown");
+  }
+});
+
+document.getElementById('blType').addEventListener('change', loadBlacklist);
+
+// Initial load
+loadCases();
+loadBlacklist();
+</script>
+</body>
+</html>
