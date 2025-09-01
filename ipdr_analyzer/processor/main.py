@@ -7,7 +7,7 @@ from ipdr_analyzer.common.kafka_client import create_producer, create_consumer
 from ipdr_analyzer.processor.rule_based.bogon import is_bogon
 from ipdr_analyzer.processor.rule_based.geo_lookup import get_geo
 from ipdr_analyzer.processor.rule_based.sub_entropy import ip_entropy
-from ipdr_analyzer.processor.rule_based.abuseipdb import abuseipdb_score 
+# from ipdr_analyzer.processor.rule_based.abuseipdb import abuseipdb_score 
 
 # Maintain subscriber IP history for entropy calculation
 subscriber_ip_history = defaultdict(list)
@@ -39,10 +39,10 @@ def asn_mismatch(ip_asn, subscriber_asn):
     return 0 if ip_asn == subscriber_asn else 1
 
 # Blacklist check: call an API or lookup table
-# def is_blacklisted_ip(ip):
-#     # TODO: replace with AbuseIPDB / threat feed
-#     blacklisted_ips = {"1.2.3.4", "5.6.7.8"}
-#     return 1 if ip in blacklisted_ips else 0
+def is_blacklisted_ip(ip):
+    # TODO: replace with AbuseIPDB / threat feed
+    blacklisted_ips = {"1.2.3.4", "5.6.7.8", "119.135.22.68", "205.221.5.38"}
+    return 1 if ip in blacklisted_ips else 0
 
 # Reverse DNS mismatch check
 def rdns_mismatch(ip, expected_patterns=None):
@@ -146,9 +146,9 @@ for message in consumer:
         )
 
         # Placeholder for blacklist / rDNS
-        # processed_data['blacklist_score_ip'] = is_blacklisted_ip(src_ip)
-        processed_data['blacklist_score_abuseipdb'] = abuseipdb_score(src_ip)
-        processed_data['rDNS_mismatch'] = rdns_mismatch(src_ip)
+        processed_data['blacklist_score_ip'] = int(is_blacklisted_ip(src_ip) or 0)
+        # processed_data['blacklist_score_abuseipdb'] = int(abuseipdb_score(src_ip) or 0)
+        processed_data['rDNS_mismatch'] = int(rdns_mismatch(src_ip) or 1)
 
         # Send enriched record to processed topic
         producer.send(DESTINATION_TOPIC, processed_data)

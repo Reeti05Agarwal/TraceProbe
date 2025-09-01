@@ -76,8 +76,8 @@ async function loadCases() {
         <td>${c.case_id}</td>
         <td>${c.case_name}</td>
         <td>${c.investigator_id}</td>
-        <td>${c.date_created || ''}</td>
-        <td><a href="${c.kibana_link || '#'}" target="_blank">Open</a></td>
+        <td>${c.date_created ? new Date(c.date_created).toLocaleString() : ''}</td>
+        <td><a href="http://kibana:5601/s/${encodeURIComponent(c.case_name)}/app/dashboard#/list?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))" target="_blank">Open</a></td>
       </tr>`).join('') + '</tbody></table>';
   } catch (err) {
     document.getElementById('casesList').innerText = 'Failed to load cases';
@@ -93,7 +93,7 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     const res = await fetch('/api/cases', { method: 'POST', body: form });
     const json = await res.json();
     if (res.ok) {
-      status.innerText = '✅ Case created: ' + json.case_id;
+      status.innerText = '✅ Case created: ' + json.case_name;
       e.target.reset();
       loadCases();
     } else {

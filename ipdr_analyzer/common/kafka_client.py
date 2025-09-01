@@ -15,13 +15,13 @@ def create_producer():
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
 
-def create_consumer(topic, group_id):
+def create_consumer(topic, group_id, start_from_latest=True):
     """Creates a new Kafka consumer client for a specific topic and group."""
     print(f"Connecting consumer to Kafka at {KAFKA_BROKER} for topic '{topic}'...")
     return KafkaConsumer(
         topic,
         bootstrap_servers=[KAFKA_BROKER],
-        auto_offset_reset='earliest',
+        auto_offset_reset='latest' if start_from_latest else 'earliest',
         group_id=group_id,
         value_deserializer=lambda m: json.loads(m.decode('utf-8'))
     )

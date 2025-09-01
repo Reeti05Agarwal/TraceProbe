@@ -139,9 +139,10 @@ app.get("/api/cases", async (req, res) => {
       return {
         case_id: c.case_id,
         case_name: c.case_name,
+        investigator_id: c.investigator_id,  
         description: c.description,
         date_created: c.date_created,
-        dashboard_url: `${KIBANA_URL}/s/${encodeURIComponent(c.case_id)}/app/dashboards`,
+        dashboard_url: `http://kibana:5601/s/${c.case_name}/app/home`,
       };
     });
 
