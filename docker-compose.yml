@@ -51,7 +51,7 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
     container_name: elasticsearch
     environment:
-      - "discovery.type=single-node"
+      - "discovery.type=single-node" 
       - "xpack.security.enabled=false"
     ports:
       - "9200:9200"
@@ -60,7 +60,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - es_data:/usr/share/elasticsearch/data
+      - es_data:/usr/share/elasticsearch/data 
     networks:
       - ipdr-network
     healthcheck:
@@ -81,7 +81,7 @@ services:
     networks:
       - ipdr-network
     volumes:
-      - ./templates:/templates
+      - ./templates:/templates 
     restart: always
 
   producer:
@@ -133,6 +133,9 @@ services:
     container_name: processor
     env_file:
       - .env 
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     depends_on:
       kafka:
         condition: service_healthy

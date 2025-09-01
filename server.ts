@@ -124,6 +124,35 @@ async function importDashboardTemplate(
 }
 
 // --- Routes ---
+// GET /api/cases (list all cases)
+app.get("/api/cases", async (req, res) => {
+  try {
+    const result = await es.search({
+      index: "cases",
+      size: 100, // adjust as needed
+      sort: [{ date_created: { order: "desc" } }],
+      query: { match_all: {} },
+    });
+
+    const cases = result.hits.hits.map((hit: any) => {
+      const c = hit._source;
+      return {
+        case_id: c.case_id,
+        case_name: c.case_name,
+        description: c.description,
+        date_created: c.date_created,
+        dashboard_url: `${KIBANA_URL}/s/${encodeURIComponent(c.case_id)}/app/dashboards`,
+      };
+    });
+
+    res.json(cases);
+  } catch (err: any) {
+    console.error("Error fetching cases:", err?.response?.data || err.toString());
+    res.status(500).json({ error: "server_error" });
+  }
+});
+
+
 
 app.post("/api/cases", upload.single("file"), async (req, res) => {
   try {
@@ -199,7 +228,7 @@ app.post("/api/blacklist/:type", async (req, res) => {
     }
 
     // ensure directory exists
-    const dirPath = path.join(__dirname, "data", "blacklist");
+    const dirPath = path.join(process.cwd(), "data", "blacklist");
     fs.mkdirSync(dirPath, { recursive: true });
 
     const filePath = path.join(dirPath, `blacklist_${type}.json`);
@@ -226,6 +255,8 @@ app.post("/api/blacklist/:type", async (req, res) => {
 
     // save back to file
     fs.writeFileSync(filePath, JSON.stringify(current, null, 2), "utf-8");
+    console.log("Blacklist file path:", filePath);
+
 
     res.json({ inserted, skipped });
   } catch (err) {
