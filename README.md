@@ -18,15 +18,20 @@ In digital forensics, investigators often face the monumental task of sifting th
 
 ### Key Features
 
-* **Real-Time Log Ingestion:** Ingests high-volume IPDR streams using Apache Kafka without data loss.
+* **Log Ingestion & Normalization:** Ingests high-volume IPDR streams using Apache Kafka without data loss and Supports multiple formats (CSV, JSON, XML).
 * **A-Party to B-Party Mapping:** Intelligently parses complex logs to identify and map initiator vs. recipient communications.
-* **Automated Anomaly Detection:** Utilizes Apache Flink for complex event processing to flag suspicious patterns, such as connections to known malicious IPs or unusual data transfer volumes.
+* **Automated Anomaly Detection:** Utilizes Apache Flink for complex event processing to flag suspicious patterns, such as connections to known malicious IPs, unusual data transfer volumes, DNS record frequency counts, Fake ID detection (geo mismatch, entropy analysis).
 * **Interactive Visualization:** A user-friendly dashboard featuring:
+    * **Session timelines**
+    * **Protocol Analysis**
     * **Geographical Map View:** To visualize the physical locations of communicating parties.
     * **Graph-Based Network View:** To explore relationships and connections between different entities.
 * **Advanced Query & Search:** A powerful search interface for investigators to filter and query specific sessions, IPs, or timeframes.
 * **Data Normalization:** Handles various IPDR formats by normalizing them into a unified schema for consistent analysis.
-
+* **Security & Compliance:**
+   * **Role-Based Access Control (RBAC)**
+   * **TLS encryption for secure communication**
+   * **Index-level security & audit logging**
 ---
 
 ## 🏛️ Architecture
